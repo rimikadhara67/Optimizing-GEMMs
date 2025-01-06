@@ -5,7 +5,7 @@
 #include <random>
 #include <iomanip>
 #include <fstream>
-#include "../include/MatrixFP32.cuh"
+#include "include/matrix.cuh"
 
 // CUDA Error Checking
 #define cuda_check(err) { \

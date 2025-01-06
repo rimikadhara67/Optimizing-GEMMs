@@ -1,5 +1,4 @@
 #include "include/matrix.cuh"
-#include "include/gemm1.cuh"
 #include "assert.h"
 #include <iostream>
 #include <iomanip>
@@ -34,6 +33,7 @@ void gemm1(float *d_A_ptr, float *d_B_ptr, float *d_C_ptr, int C_n_rows, int C_n
     naive_mat_mul_kernel<<<dim_grid, dim_block>>>(d_A_ptr, d_B_ptr, d_C_ptr, C_n_rows, C_n_cols, A_n_cols);
 }
 
+//  THIS MAIN BLOCK STAYS THE SAME FOR ALL GeMM IMPLEMENTATIONS
 int main() {
     // Matrix sizes to be processed
     int sizes[] = {128, 256, 512, 1024};

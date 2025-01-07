@@ -6,7 +6,7 @@
 
 // GEMM 02 -- COALESCED MAT_MUL IMPLEMENTATION
 // SGEMM is C = α*(A @ B)+β*C; here α=1, β=0
-__global__ void coalesced_mat_mul_kernel(float *d_A_ptr, float *d_B_ptr, float *d_C_ptr, 
+__global__ void coalesced_mat_mul_kernel(float *d_A, float *d_B, float *d_C, 
                                     int C_n_rows, int C_n_cols, int A_n_cols)
 {
     // Switching the order of row and col for coalescing
@@ -18,19 +18,19 @@ __global__ void coalesced_mat_mul_kernel(float *d_A_ptr, float *d_B_ptr, float *
         float value = 0;
         // Computing dot product from A_row and B_col
         for (int k = 0; k < A_n_cols; k++){
-            value += d_A_ptr[row * A_n_cols + k] * d_B_ptr[k * C_n_cols + col];
+            value += d_A[row * A_n_cols + k] * d_B[k * C_n_cols + col];
         }
         // Resulting C matrix = alpha(dot_prod) + beta[C_mtx]
         // alpha = 1 ; beta = 0 ;
-        d_C_ptr[row * C_n_cols + col] = 1 * value + 0 * d_C_ptr[row * C_n_cols + col];
+        d_C[row * C_n_cols + col] = 1 * value + 0 * d_C[row * C_n_cols + col];
     }
 }
 
 // function to invoke above CUDA kernel
-void gemm2(float *d_A_ptr, float *d_B_ptr, float *d_C_ptr, int C_n_rows, int C_n_cols, int A_n_cols){
+void gemm2(float *d_A, float *d_B, float *d_C, int C_n_rows, int C_n_cols, int A_n_cols){
     dim3 dim_block(32, 32, 1);
     dim3 dim_grid(ceil(C_n_rows / (float)32), ceil(C_n_cols / (float)32), 1);
-    coalesced_mat_mul_kernel<<<dim_grid, dim_block>>>(d_A_ptr, d_B_ptr, d_C_ptr, C_n_rows, C_n_cols, A_n_cols);
+    coalesced_mat_mul_kernel<<<dim_grid, dim_block>>>(d_A, d_B, d_C, C_n_rows, C_n_cols, A_n_cols);
 }
 
 int main() {
@@ -44,27 +44,27 @@ int main() {
     for (int index = 0; index < numSizes; index++) {
         int size = sizes[index];
 
-        float *d_A_ptr, *d_B_ptr, *d_C_ptr;
-        cudaMalloc((void **)&d_A_ptr, size * size * sizeof(float));
-        cudaMalloc((void **)&d_B_ptr, size * size * sizeof(float));
-        cudaMalloc((void **)&d_C_ptr, size * size * sizeof(float));
+        float *d_A, *d_B, *d_C;
+        cudaMalloc((void **)&d_A, size * size * sizeof(float));
+        cudaMalloc((void **)&d_B, size * size * sizeof(float));
+        cudaMalloc((void **)&d_C, size * size * sizeof(float));
 
-        float *h_A_ptr = new float[size * size];
-        float *h_B_ptr = new float[size * size];
+        float *h_A = new float[size * size];
+        float *h_B = new float[size * size];
         float *h_C_device = new float[size * size];
         float *h_C_host = new float[size * size];
 
         srand(42);
         for (int j = 0; j < size * size; j++) {
-            h_A_ptr[j] = static_cast<float>(rand()) / RAND_MAX;
-            h_B_ptr[j] = static_cast<float>(rand()) / RAND_MAX;
+            h_A[j] = static_cast<float>(rand()) / RAND_MAX;
+            h_B[j] = static_cast<float>(rand()) / RAND_MAX;
         }
 
-        cudaMemcpy(d_A_ptr, h_A_ptr, size * size * sizeof(float), cudaMemcpyHostToDevice);
-        cudaMemcpy(d_B_ptr, h_B_ptr, size * size * sizeof(float), cudaMemcpyHostToDevice);
+        cudaMemcpy(d_A, h_A, size * size * sizeof(float), cudaMemcpyHostToDevice);
+        cudaMemcpy(d_B, h_B, size * size * sizeof(float), cudaMemcpyHostToDevice);
 
         auto start = std::chrono::high_resolution_clock::now();
-        gemm2(d_A_ptr, d_B_ptr, d_C_ptr, size, size, size);
+        gemm2(d_A, d_B, d_C, size, size, size);
         cudaDeviceSynchronize();
         auto end = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> elapsed = end - start;
@@ -73,13 +73,13 @@ int main() {
         double ops = 2.0 * size * size * size;
         gflops[index] = ops / (1e9 * times[index]);
 
-        cudaMemcpy(h_C_device, d_C_ptr, size * size * sizeof(float), cudaMemcpyDeviceToHost);
+        cudaMemcpy(h_C_device, d_C, size * size * sizeof(float), cudaMemcpyDeviceToHost);
 
         for (int i = 0; i < size; i++) {
             for (int j = 0; j < size; j++) {
                 float sum = 0;
                 for (int k = 0; k < size; k++) {
-                    sum += h_A_ptr[i * size + k] * h_B_ptr[k * size + j];
+                    sum += h_A[i * size + k] * h_B[k * size + j];
                 }
                 h_C_host[i * size + j] = sum;
             }
@@ -101,12 +101,12 @@ int main() {
             std::cout << "\033[31mVerification Failed\033[0m\n";
         }
 
-        cudaFree(d_A_ptr);
-        cudaFree(d_B_ptr);
-        cudaFree(d_C_ptr);
+        cudaFree(d_A);
+        cudaFree(d_B);
+        cudaFree(d_C);
 
-        delete[] h_A_ptr;
-        delete[] h_B_ptr;
+        delete[] h_A;
+        delete[] h_B;
         delete[] h_C_device;
         delete[] h_C_host;
     }

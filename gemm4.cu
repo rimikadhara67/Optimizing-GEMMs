@@ -4,62 +4,73 @@
 #include <iomanip>
 #include <chrono>
 
-// GEMM 03 -- TILED MAT_MUL IMPLEMENTATION
+// GEMM 04 -- COARSE 1D MAT_MUL IMPLEMENTATION
 // SGEMM is C = α*(A @ B)+β*C; here α=1, β=0
-#define TILE_WIDTH 32
 
-__global__ void tiled_mat_mul_kernel(float *d_A_ptr, float *d_B_ptr, float *d_C_ptr, 
+#define COARSE_FACTOR 8
+#define tiles_Arows 64
+#define tiles_Acols 8
+#define tiles_Bcols 64
+
+__global__ void coarse1D_mat_mul_kernel(float *d_A_ptr, float *d_B_ptr, float *d_C_ptr, 
                                     int C_n_rows, int C_n_cols, int A_n_cols)
 {
-    assert(TILE_WIDTH == blockDim.x);
-    assert(TILE_WIDTH == blockDim.y);
-    
     const int b_x = blockIdx.x;
     const int b_y = blockIdx.y;
     const int t_x = threadIdx.x;
-    const int t_y = threadIdx.y;
 
-    // Initializing row, col and number of tiles
-    const int row = TILE_WIDTH * b_y + t_y;
-    const int col = TILE_WIDTH * b_x + t_x;
-    const int num_tiles = ceil((float)A_n_cols/TILE_WIDTH);
-    
-    // Shared Memory allocation
-    __shared__ float sh_A[TILE_WIDTH][TILE_WIDTH];
-    __shared__ float sh_B[TILE_WIDTH][TILE_WIDTH];
+    // 1D -> 2D
+    const int A_view_ty = t_x / tiles_Acols;
+    const int A_view_tx = t_x % tiles_Acols;
+    const int B_view_ty = t_x / tiles_Bcols;
+    const int B_view_tx = t_x % tiles_Bcols;
 
-    float value = 0;
+    // Defining rows and cols for C[row, col] and tiles
+    const int row = tiles_Arows * b_y + COARSE_FACTOR * (t_x/tiles_Bcols);
+    const int col = tiles_Bcols * b_x + (t_x % tiles_Bcols);
+    const int num_tiles = ceil((float)A_n_cols / tiles_Acols);
+
+    // Saving in SMEM
+    __shared__ float sh_A[tiles_Arows][tiles_Acols];
+    __shared__ float sh_B[tiles_Acols][tiles_Bcols];
+
+    float value[COARSE_FACTOR] = {0.0f};
     for (int tile = 0; tile < num_tiles; tile++){
-        // loading our tiles onto shared memory
-        // Matrix A
-        if ((row < C_n_rows) && ((tile * TILE_WIDTH + t_x) < A_n_cols)){
-            sh_A[t_y][t_x] = d_A_ptr[(row) * A_n_cols + (tile * TILE_WIDTH + t_x)]; }
-        else { sh_A[t_y][t_x] = 0.0f; }
-
-        // Matrix B
-        if (((tile * TILE_WIDTH + t_y) < A_n_cols) && (col < C_n_cols)){
-            sh_B[t_y][t_x] = d_B_ptr[(tile * TILE_WIDTH + t_y) * C_n_cols + (col)]; }
-        else { sh_B[t_y][t_x] = 0.0f; }
-
-        // sync threads
+        if ((b_y * tiles_Arows + A_view_ty < C_n_rows) && ((tile * tiles_Acols + A_view_tx) < A_n_cols)){
+            sh_A[A_view_ty][A_view_tx] = d_A_ptr[(b_y*tiles_Arows + A_view_ty)*A_n_cols + (tile * tiles_Acols + A_view_tx)]; }
+        else
+            { sh_A[A_view_ty][A_view_tx] = 0.0f; }
+        
+        if (((tile * tiles_Acols + B_view_ty) < A_n_cols) && (b_x * tiles_Bcols + B_view_tx < C_n_cols)){
+            sh_B[B_view_ty][B_view_tx] = d_B_ptr[(tile*tiles_Acols + B_view_ty) * C_n_cols + (b_x * tiles_Bcols + B_view_tx)];
+        }
+        else
+            { sh_B[B_view_ty][B_view_tx] = 0.0f; }
         __syncthreads();
 
-        // calc dot product
-        for (int k_tile = 0; k_tile < TILE_WIDTH; k_tile++)
-            value += sh_A[t_y][k_tile] * sh_B[k_tile][t_x];
+        for (int k = 0; k < tiles_Acols; k++)
+        {
+            float B_val_register = sh_B[k][B_view_tx];
+            // Dot product
+            for (int c = 0; c < COARSE_FACTOR; c++)
+                value[c] += sh_A[B_view_ty*COARSE_FACTOR+c][k] * B_val_register;  
+        }
         __syncthreads();
     }
 
     // Storing and assigning
-    if ((row < C_n_rows) && (col < C_n_cols))
-        d_C_ptr[(row)*C_n_cols + (col)] =  1*value + 0*d_C_ptr[(row)*C_n_cols + (col)];
+    for (int c = 0; c < COARSE_FACTOR; ++c){
+        if ((row+c < C_n_rows) && (col < C_n_cols)){
+            d_C_ptr[(row+c)*C_n_cols + (col)] = 1*value[c] + 0*d_C_ptr[(row+c)*C_n_cols + (col)];
+        }
+    } 
 }
 
 // function to invoke above CUDA kernel
-void gemm3(float *d_A_ptr, float *d_B_ptr, float *d_C_ptr, int C_n_rows, int C_n_cols, int A_n_cols){
-    dim3 dim_block(32, 32, 1);
-    dim3 dim_grid(ceil(C_n_rows / (float)32), ceil(C_n_cols / (float)32), 1);
-    tiled_mat_mul_kernel<<<dim_grid, dim_block>>>(d_A_ptr, d_B_ptr, d_C_ptr, C_n_rows, C_n_cols, A_n_cols);
+void gemm4(float *d_A_ptr, float *d_B_ptr, float *d_C_ptr, int C_n_rows, int C_n_cols, int A_n_cols){
+    dim3 dim_grid(ceil(C_n_cols/(float)(tiles_Bcols)), ceil(C_n_rows/(float)(tiles_Arows)));
+    dim3 dim_block(tiles_Arows * tiles_Bcols/COARSE_FACTOR);
+    coarse1D_mat_mul_kernel<<<dim_grid, dim_block>>>(d_A_ptr, d_B_ptr, d_C_ptr, C_n_rows, C_n_cols, A_n_cols);
 }
 
 int main() {
@@ -93,7 +104,7 @@ int main() {
         cudaMemcpy(d_B_ptr, h_B_ptr, size * size * sizeof(float), cudaMemcpyHostToDevice);
 
         auto start = std::chrono::high_resolution_clock::now();
-        gemm3(d_A_ptr, d_B_ptr, d_C_ptr, size, size, size);
+        gemm4(d_A_ptr, d_B_ptr, d_C_ptr, size, size, size);
         cudaDeviceSynchronize();
         auto end = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> elapsed = end - start;

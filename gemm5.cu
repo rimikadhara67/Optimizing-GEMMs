@@ -99,32 +99,33 @@ int main() {
     const int numSizes = sizeof(sizes) / sizeof(sizes[0]);
     double times[numSizes];
     double gflops[numSizes];
+    double bandwidth[numSizes];
 
     std::cout << "Verification Results:\n";
     for (int index = 0; index < numSizes; index++) {
         int size = sizes[index];
 
-        float *d_A, *d_B, *d_C;
-        cudaMalloc((void **)&d_A, size * size * sizeof(float));
-        cudaMalloc((void **)&d_B, size * size * sizeof(float));
-        cudaMalloc((void **)&d_C, size * size * sizeof(float));
+        float *d_A_ptr, *d_B_ptr, *d_C_ptr;
+        cudaMalloc((void **)&d_A_ptr, size * size * sizeof(float));
+        cudaMalloc((void **)&d_B_ptr, size * size * sizeof(float));
+        cudaMalloc((void **)&d_C_ptr, size * size * sizeof(float));
 
-        float *h_A = new float[size * size];
-        float *h_B = new float[size * size];
+        float *h_A_ptr = new float[size * size];
+        float *h_B_ptr = new float[size * size];
         float *h_C_device = new float[size * size];
         float *h_C_host = new float[size * size];
 
         srand(42);
         for (int j = 0; j < size * size; j++) {
-            h_A[j] = static_cast<float>(rand()) / RAND_MAX;
-            h_B[j] = static_cast<float>(rand()) / RAND_MAX;
+            h_A_ptr[j] = static_cast<float>(rand()) / RAND_MAX;
+            h_B_ptr[j] = static_cast<float>(rand()) / RAND_MAX;
         }
 
-        cudaMemcpy(d_A, h_A, size * size * sizeof(float), cudaMemcpyHostToDevice);
-        cudaMemcpy(d_B, h_B, size * size * sizeof(float), cudaMemcpyHostToDevice);
+        cudaMemcpy(d_A_ptr, h_A_ptr, size * size * sizeof(float), cudaMemcpyHostToDevice);
+        cudaMemcpy(d_B_ptr, h_B_ptr, size * size * sizeof(float), cudaMemcpyHostToDevice);
 
         auto start = std::chrono::high_resolution_clock::now();
-        gemm5(d_A, d_B, d_C, size, size, size);
+        gemm1(d_A_ptr, d_B_ptr, d_C_ptr, size, size, size);
         cudaDeviceSynchronize();
         auto end = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> elapsed = end - start;
@@ -133,13 +134,15 @@ int main() {
         double ops = 2.0 * size * size * size;
         gflops[index] = ops / (1e9 * times[index]);
 
-        cudaMemcpy(h_C_device, d_C, size * size * sizeof(float), cudaMemcpyDeviceToHost);
+        cudaMemcpy(h_C_device, d_C_ptr, size * size * sizeof(float), cudaMemcpyDeviceToHost);
+        double dataTransferred = 3 * size * size * sizeof(float);
+        bandwidth[index] = dataTransferred / (times[index] * 1e9);
 
         for (int i = 0; i < size; i++) {
             for (int j = 0; j < size; j++) {
                 float sum = 0;
                 for (int k = 0; k < size; k++) {
-                    sum += h_A[i * size + k] * h_B[k * size + j];
+                    sum += h_A_ptr[i * size + k] * h_B_ptr[k * size + j];
                 }
                 h_C_host[i * size + j] = sum;
             }
@@ -161,12 +164,12 @@ int main() {
             std::cout << "\033[31mVerification Failed\033[0m\n";
         }
 
-        cudaFree(d_A);
-        cudaFree(d_B);
-        cudaFree(d_C);
+        cudaFree(d_A_ptr);
+        cudaFree(d_B_ptr);
+        cudaFree(d_C_ptr);
 
-        delete[] h_A;
-        delete[] h_B;
+        delete[] h_A_ptr;
+        delete[] h_B_ptr;
         delete[] h_C_device;
         delete[] h_C_host;
     }
@@ -188,7 +191,11 @@ int main() {
         std::cout << std::setw(15) << std::fixed << std::setprecision(6) << gflop;
     }
     std::cout << "\n------------------------------------------------------------------------------\n";
-
+    std::cout << "Bandwidth (GB/s):";
+    for (double bw : bandwidth) {
+        std::cout << std::setw(14) << std::fixed << std::setprecision(2) << bw << " ";
+    }
+    std::cout << "\n------------------------------------------------------------------------------\n";
 
 
     return 0;

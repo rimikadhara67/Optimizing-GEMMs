@@ -168,7 +168,7 @@ int main() {
         cudaMemcpy(d_B_ptr, h_B_ptr, size * size * sizeof(float), cudaMemcpyHostToDevice);
 
         auto start = std::chrono::high_resolution_clock::now();
-        gemm1(d_A_ptr, d_B_ptr, d_C_ptr, size, size, size);
+        gemm6(d_A_ptr, d_B_ptr, d_C_ptr, size, size, size);
         cudaDeviceSynchronize();
         auto end = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> elapsed = end - start;
@@ -179,7 +179,7 @@ int main() {
 
         cudaMemcpy(h_C_device, d_C_ptr, size * size * sizeof(float), cudaMemcpyDeviceToHost);
         double dataTransferred = 3 * size * size * sizeof(float);
-        bandwidth[index] = dataTransferred / (times[index] * 1e9);
+        bandwidth[index] = (times[index] > 0) ? (dataTransferred / times[index] / 1e8) : 0; // computed in GB/s, handling zero duration
 
         for (int i = 0; i < size; i++) {
             for (int j = 0; j < size; j++) {

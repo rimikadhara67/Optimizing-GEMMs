@@ -15,14 +15,14 @@ __global__ void coalesced_mat_mul_kernel(float *d_A, float *d_B, float *d_C,
 
     // everything else stays the same
     if (row < C_n_rows && col < C_n_cols){
-        float value = 0;
+        float dot_prod = 0;
         // Computing dot product from A_row and B_col
         for (int k = 0; k < A_n_cols; k++){
-            value += d_A[row * A_n_cols + k] * d_B[k * C_n_cols + col];
+            dot_prod += d_A[row * A_n_cols + k] * d_B[k * C_n_cols + col];
         }
         // Resulting C matrix = alpha(dot_prod) + beta[C_mtx]
         // alpha = 1 ; beta = 0 ;
-        d_C[row * C_n_cols + col] = 1 * value + 0 * d_C[row * C_n_cols + col];
+        d_C[row * C_n_cols + col] = 1 * dot_prod + 0 * d_C[row * C_n_cols + col];
     }
 }
 

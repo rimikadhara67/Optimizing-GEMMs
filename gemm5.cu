@@ -44,7 +44,7 @@ __global__ void coarse2D_mat_mul_kernel(float *d_A, float *d_B, float *d_C,
     __shared__ float sh_B[tiles_Acols][tiles_Bcols];
 
     // Mat-Mul Parallelize
-    float value[COARSE_Y][COARSE_X] = {0.0f};
+    float dot_prod[COARSE_Y][COARSE_X] = {0.0f};
     float register_A[COARSE_X] = {0.0f};
     float register_B[COARSE_Y] = {0.0f};
 
@@ -70,17 +70,17 @@ __global__ void coarse2D_mat_mul_kernel(float *d_A, float *d_B, float *d_C,
 
             for (int cy = 0; cy < COARSE_Y; ++cy){
                 for (int cx = 0; cx < COARSE_X; ++cx){
-                    value[cy][cx] += register_A[cy] * register_B[cx];
+                    dot_prod[cy][cx] += register_A[cy] * register_B[cx];
                 }
             }
         }
         __syncthreads();
     }
-    // assign calculated value
+    // assign calculated dot_prod
     for (int cy = 0; cy < COARSE_Y; ++cy){
         for (int cx = 0; cx < COARSE_X; cx++){
             if((b_y * tiles_Arows + row + cy < C_n_rows) && (b_x * tiles_Bcols + col + cx < C_n_cols)){
-                d_C[(b_y * tiles_Arows + row + cy) * C_n_cols + (b_x * tiles_Bcols + col + cx)] = 1 * value[cy][cx] + 0* d_C[(b_y * tiles_Arows + row + cy) * C_n_cols + (b_x * tiles_Bcols + col + cx)];
+                d_C[(b_y * tiles_Arows + row + cy) * C_n_cols + (b_x * tiles_Bcols + col + cx)] = 1 * dot_prod[cy][cx] + 0* d_C[(b_y * tiles_Arows + row + cy) * C_n_cols + (b_x * tiles_Bcols + col + cx)];
             }
         }
     }

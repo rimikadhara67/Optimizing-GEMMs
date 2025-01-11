@@ -28,7 +28,7 @@ __global__ void tiled_mat_mul_kernel(float *d_A, float *d_B, float *d_C,
     __shared__ float sh_A[TILE_WIDTH][TILE_WIDTH];
     __shared__ float sh_B[TILE_WIDTH][TILE_WIDTH];
 
-    float value = 0;
+    float dot_prod = 0;
     for (int tile = 0; tile < num_tiles; tile++){
         // loading our tiles onto shared memory
         // Matrix A
@@ -46,13 +46,13 @@ __global__ void tiled_mat_mul_kernel(float *d_A, float *d_B, float *d_C,
 
         // calc dot product
         for (int k_tile = 0; k_tile < TILE_WIDTH; k_tile++)
-            value += sh_A[t_y][k_tile] * sh_B[k_tile][t_x];
+            dot_prod += sh_A[t_y][k_tile] * sh_B[k_tile][t_x];
         __syncthreads();
     }
 
     // Storing and assigning
     if ((row < C_n_rows) && (col < C_n_cols))
-        d_C[(row)*C_n_cols + (col)] =  1*value + 0*d_C[(row)*C_n_cols + (col)];
+        d_C[(row)*C_n_cols + (col)] =  1*dot_prod + 0*d_C[(row)*C_n_cols + (col)];
 }
 
 // function to invoke above CUDA kernel

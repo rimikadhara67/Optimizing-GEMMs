@@ -34,7 +34,7 @@ __global__ void coarse1D_mat_mul_kernel(float *d_A, float *d_B, float *d_C,
     __shared__ float sh_A[tiles_Arows][tiles_Acols];
     __shared__ float sh_B[tiles_Acols][tiles_Bcols];
 
-    float value[COARSE_FACTOR] = {0.0f};
+    float dot_prod[COARSE_FACTOR] = {0.0f};
     for (int tile = 0; tile < num_tiles; tile++){
         if ((b_y * tiles_Arows + A_view_ty < C_n_rows) && ((tile * tiles_Acols + A_view_tx) < A_n_cols)){
             sh_A[A_view_ty][A_view_tx] = d_A[(b_y*tiles_Arows + A_view_ty)*A_n_cols + (tile * tiles_Acols + A_view_tx)]; }
@@ -53,7 +53,7 @@ __global__ void coarse1D_mat_mul_kernel(float *d_A, float *d_B, float *d_C,
             float B_val_register = sh_B[k][B_view_tx];
             // Dot product
             for (int c = 0; c < COARSE_FACTOR; c++)
-                value[c] += sh_A[B_view_ty*COARSE_FACTOR+c][k] * B_val_register;  
+                dot_prod[c] += sh_A[B_view_ty*COARSE_FACTOR+c][k] * B_val_register;  
         }
         __syncthreads();
     }
@@ -61,7 +61,7 @@ __global__ void coarse1D_mat_mul_kernel(float *d_A, float *d_B, float *d_C,
     // Storing and assigning
     for (int c = 0; c < COARSE_FACTOR; ++c){
         if ((row+c < C_n_rows) && (col < C_n_cols)){
-            d_C[(row+c)*C_n_cols + (col)] = 1*value[c] + 0*d_C[(row+c)*C_n_cols + (col)];
+            d_C[(row+c)*C_n_cols + (col)] = 1*dot_prod[c] + 0*d_C[(row+c)*C_n_cols + (col)];
         }
     } 
 }

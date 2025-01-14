@@ -20,5 +20,11 @@ I have also written a more comprehensive documentation of my approach and observ
 ### Comparing Time across 128, 256, 512, 1024 threads across ALL Implementations
 ![Time Comparison for all implementations](results/growth.png)
 
+## Quick Notes on Tensor Core Implementation
+Tensor Cores are a specialized type of processing unit within NVIDIA GPUs, designed to accelerate the performance of matrix operations, which are a cornerstone of deep learning computations. Introduced with the NVIDIA Volta architecture, Tensor Cores are engineered to perform large matrix operations efficiently by executing mixed-precision arithmetic, combining half-precision (FP16) inputs to produce either half-precision or single-precision (FP32) outputs. Let's look at its key features.
+- **Mixed Precision**: By utilizing half-precision inputs and accumulating results in single-precision, Tensor Cores optimize the balance between speed and accuracy. This approach allows more computations to be performed in parallel, reducing the time and power required for data-intensive tasks.
+- **High Throughput**: Each Tensor Core can perform 64 floating-point fused-multiply-add (FMA) operations per clock cycle. This enables a significant boost in throughput for operations common in deep learning, such as dot products and matrix multiplications.
+- **Difference from CUDA Cores**: One of the biggest differences between CUDA Cores and Tensor Cores is how they can be controlled. CUDA cores can be controlled at a **thread** level and Tensor Cores need to be controlled on a **warp** level.
+
 ## Resources
 This project was inspired by [this tutorial](https://www.youtube.com/watch?v=GetaI7KhbzM).

@@ -16,9 +16,9 @@ I have also written a more comprehensive documentation of my approach and observ
 ## Results
 ### Comparing results for 1024 Threads (Ranked by Time(s))
 ![Performance Optimization for 1024 threads](results/results.png)
-![Growth Chart for SpeedUp and GFLOPS](results/growth.png)
+![Growth Chart for SpeedUp and GFLOPS](results/growth1024.png)
 ### Comparing Time across 128, 256, 512, 1024 threads across ALL Implementations
-![Time Comparison for all implementations](results/all_time.png)
+![Time Comparison for all implementations](results/growth.png)
 
 ## Resources
 This project was inspired by [this tutorial](https://www.youtube.com/watch?v=GetaI7KhbzM).

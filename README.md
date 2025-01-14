@@ -14,7 +14,7 @@ This project focuses on enhancing the performance of single-precision floating-p
 I have also written a more comprehensive documentation of my approach and observations. [You can find the article here!](<https://medium.com/@rimikadhara/6-step-optimization-of-gemms-in-cuda-d3b01d990125>)
 
 ## Results
-### Comparing results for 1024 Threads
+### Comparing results for 1024 Threads (Ranked by Time(s))
 ![Performance Optimization for 1024 threads](results/results.png)
 ![Growth Chart for SpeedUp and GFLOPS](results/growth.png)
 ### Performance Comparison: Naive GEMM vs. Tensor Core GEMM

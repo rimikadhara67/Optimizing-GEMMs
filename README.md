@@ -20,7 +20,7 @@ I have also written a more comprehensive documentation of my approach and observ
 ### Performance Comparison: Naive GEMM vs. Tensor Core GEMM
 The visualization of these differences can be seen in the following image, which plots the performance metrics side-by-side for an immediate comparison between the two methods. These two methods are more comparable because the optimization strategies have not yet been implemented on tensor cores. GeMM implemented on Tensor Cores highlights how much of a difference specialized hardware can make on our computations.
 
-![Comparison of Naive GEMM-1 and Tensor Core GEMM](gemm1-vs-tcgemm.png)
+![Comparison of Naive GEMM-1 and Tensor Core GEMM](results/gemm1-vs-tcgemm.png)
 The naive GEMM implementation, referred to as GEMM-1, and the tensor core-based implementation exhibit significant differences in performance across various metrics. The tensor cores utilize specialized hardware acceleration features available on NVIDIA GPUs, which allow for more efficient handling of matrix multiplication operations. This leads to markedly shorter execution times, higher GFLOPS, and better bandwidth utilization compared to the naive GEMM-1. These improvements are particularly noticeable as the matrix size increases, underscoring the tensor cores' ability to efficiently scale with larger data sets. The superior performance of tensor cores in these tests is expected due to their design to optimize deep learning and high-performance computing tasks, which inherently involve large-scale matrix operations.
 
 ## Resources

@@ -17,6 +17,8 @@ I have also written a more comprehensive documentation of my approach and observ
 ### Comparing results for 1024 Threads (Ranked by Time(s))
 ![Performance Optimization for 1024 threads](results/results.png)
 ![Growth Chart for SpeedUp and GFLOPS](results/growth.png)
+### Comparing Time across 128, 256, 512, 1024 threads across ALL Implementations
+![Time Comparison for all implementations](results/all_time.png)
 ### Performance Comparison: Naive GEMM vs. Tensor Core GEMM
 The visualization of these differences can be seen in the following image, which plots the performance metrics side-by-side for an immediate comparison between the two methods. These two methods are more comparable because the optimization strategies have not yet been implemented on tensor cores. GeMM implemented on Tensor Cores highlights how much of a difference specialized hardware can make on our computations. HOWEVER, it is important to note that the results from Tensor Core GeMM give speed up comparable to GeMM-6!!
 

@@ -11,7 +11,7 @@ This project focuses on enhancing the performance of single-precision floating-p
 - **GeMM-6**: Coarse 2D Vectorized GeMM
 
 ## Blog Post
-I have also written a more comprehensive documentation of my approach and observations. [You can find the article here!](<https://medium.com/@rimikadhara/6-step-optimization-of-gemms-in-cuda-d3b01d990125>)
+I have also written a more comprehensive documentation of my approach and observations. [You can find the article for free here!](<https://medium.com/@rimikadhara/6-step-optimization-of-gemms-in-cuda-d3b01d990125?sk=e733f9d9c86ea2f78b645d43d14da594>)
 
 ## Results
 ### Comparing results for 1024 Threads (Ranked by Time(s))

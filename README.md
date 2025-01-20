@@ -14,10 +14,10 @@ This project focuses on enhancing the performance of single-precision floating-p
 I have also written a more comprehensive documentation of my approach and observations. [You can find the article for free here!](<https://medium.com/@rimikadhara/6-step-optimization-of-gemms-in-cuda-d3b01d990125?sk=e733f9d9c86ea2f78b645d43d14da594>)
 
 ## Results
-### Comparing results for 1024 Threads (Ranked by Time(s))
+### Comparing results for 1024x1024 Matrix (Ranked by Time(s))
 ![Performance Optimization for 1024 threads](results/results.png)
 ![Growth Chart for SpeedUp and GFLOPS](results/growth1024.png)
-### Comparing Time across 128, 256, 512, 1024 threads across ALL Implementations
+### Comparing Time across 128, 256, 512, 1024 dim square matrices across ALL Implementations
 ![Time Comparison for all implementations](results/growth.png)
 
 ## Quick Notes on Tensor Core Implementation
